@@ -1,9 +1,10 @@
 #pragma once
 #include "MyUDP.h"
 #include <iostream>
+#include <time.h>
 using namespace std;
 
-MyUDP::MyUDP() : isInitialized(false)/*, sendData({ 0 }), receiveBuff({ 0 }) */{
+MyUDP::MyUDP() : isInitialized(false), wait_send(0), wait_receive(0) {
 }
 
 MyUDP::~MyUDP() {
@@ -68,14 +69,18 @@ void MyUDP::init(unsigned short port_send, int send_length, unsigned short port_
 #pragma endregion
 
 	isInitialized = true;
+}
 
-	if (portnum_send != 0) {
-		unsigned threadID1;
-		sendThread = (HANDLE)_beginthreadex(NULL, NULL, MyUDP::SendThread, this, 0, &threadID1);
-	}
-	if (portnum_receive != 0) {
-		unsigned threadID2;
-		receiveThread = (HANDLE)_beginthreadex(NULL, NULL, MyUDP::ReceiveThread, this, 0, &threadID2);
+void MyUDP::run() {
+	if (isInitialized) {
+		if (portnum_send != 0) {
+			unsigned threadID1;
+			sendThread = (HANDLE)_beginthreadex(NULL, NULL, MyUDP::SendThread, this, 0, &threadID1);
+		}
+		if (portnum_receive != 0) {
+			unsigned threadID2;
+			receiveThread = (HANDLE)_beginthreadex(NULL, NULL, MyUDP::ReceiveThread, this, 0, &threadID2);
+		}
 	}
 }
 
@@ -105,8 +110,18 @@ unsigned __stdcall MyUDP::ReceiveThread(void *ptr) {
 
 void MyUDP::updateSend() {
 	int num;
+	clock_t countStart, countEnd;
+	int waiting;
+	//countBegin = clock();
+	countEnd = clock();
 	while (true) {
+		countStart = clock();
 		num = sendto(sock_send, sendData, sendLength, 0, (const struct sockaddr *)&sockAddr_send, sizeof(sockAddr_send));
+		
+		while (wait_send > (countEnd - countStart)) {
+			countEnd = clock();
+		}
+		//Sleep(wait_send - (countEnd - countStart));
 	}
 }
 
@@ -115,4 +130,12 @@ void MyUDP::updateReceive() {
 	while (true) {
 		num = recv(sock_receive, receiveBuff, receiveLength, 0);
 	}
+}
+
+void MyUDP::setSendFPS(int fps) {
+	wait_send =  (int)(1000 * 1.0/(double)fps);
+}
+
+void MyUDP::setReceiveFPS(int fps) {
+	wait_receive = (int)(1000 * 1.0 / (double)fps);
 }

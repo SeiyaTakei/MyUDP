@@ -15,11 +15,13 @@ private:
 	SOCKET sock_send;
 	unsigned short portnum_send;
 	int sendLength;
+	int wait_send;
 	//受信ソケット
 	struct sockaddr_in sockAddr_receive;
 	SOCKET sock_receive;
 	unsigned short portnum_receive;
 	int receiveLength;
+	int wait_receive;
 
 	//スレッド処理関連
 	HANDLE sendThread;
@@ -29,11 +31,14 @@ public:
 	MyUDP();
 	~MyUDP();
 	void init(unsigned short port_send, int send_length, unsigned short port_receive, int receive_length);
+	void run();
 	void stop();
 	static unsigned __stdcall SendThread(void *ptr);
 	static unsigned __stdcall ReceiveThread(void *ptr);
 	void updateSend();
 	void updateReceive();
+	void setSendFPS(int fps);
+	void setReceiveFPS(int fps);
 
 	bool isInitialized;
 	char sendData[UDP_LENGTH_MAX];
