@@ -121,21 +121,33 @@ void MyUDP::updateSend() {
 		while (wait_send > (countEnd - countStart)) {
 			countEnd = clock();
 		}
-		//Sleep(wait_send - (countEnd - countStart));
 	}
 }
 
 void MyUDP::updateReceive() {
 	int num;
+	//clock_t countStart, countEnd;
 	while (true) {
+		//countStart = clock();
 		num = recv(sock_receive, receiveBuff, receiveLength, 0);
+		/*while (wait_send > (countEnd - countStart)) {
+			countEnd = clock();
+		}*/
 	}
 }
 
 void MyUDP::setSendFPS(int fps) {
+	if (fps <= 0) {
+		wait_send = 0;
+		return;
+	}
 	wait_send =  (int)(1000 * 1.0/(double)fps);
 }
 
 void MyUDP::setReceiveFPS(int fps) {
+	if (fps <= 0) {
+		wait_receive = 0;
+		return;
+	}
 	wait_receive = (int)(1000 * 1.0 / (double)fps);
 }
