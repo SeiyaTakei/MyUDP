@@ -4,19 +4,19 @@
 #include <time.h>
 using namespace std;
 
-MyUDP::MyUDP() : isInitialized(false), wait_send(0), wait_receive(0) {
+MyUDP::MyUDP() : isInitialized(false), wait_send(0), wait_receive(0), sendData(NULL), receiveBuff(NULL) {
 }
 
 MyUDP::~MyUDP() {
 }
 
-void MyUDP::init(unsigned short port_send, int send_length, unsigned short port_receive, int receive_length) {
+void MyUDP::init(unsigned short port_send, int send_length, char *sd, unsigned short port_receive, int receive_length, char *rb) {
 	portnum_send = port_send;
 	portnum_receive = port_receive;
 	sendLength = send_length;
 	receiveLength = receive_length;
-	memset(sendData, 0, sizeof(sendData));
-	memset(receiveBuff, 0, sizeof(receiveBuff));
+	sendData = sd;
+	receiveBuff = rb;
 
 	WSADATA wsadata;
 	if (0 != WSAStartup(MAKEWORD(2, 0), &wsadata)) {

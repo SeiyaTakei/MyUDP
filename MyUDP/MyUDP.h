@@ -1,10 +1,8 @@
 #pragma once
-//#include <Windows.h>
 #include <process.h>
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
 
-#define UDP_LENGTH_MAX 2048
 
 class MyUDP {
 private:
@@ -30,7 +28,7 @@ private:
 public:
 	MyUDP();
 	~MyUDP();
-	void init(unsigned short port_send, int send_length, unsigned short port_receive, int receive_length);
+	void init(unsigned short port_send, int send_length, char *sd, unsigned short port_receive, int receive_length, char *rb);
 	void run();
 	void stop();
 	static unsigned __stdcall SendThread(void *ptr);
@@ -41,6 +39,6 @@ public:
 	void setReceiveFPS(int fps);
 
 	bool isInitialized;
-	char sendData[UDP_LENGTH_MAX];
-	char receiveBuff[UDP_LENGTH_MAX];
+	char *sendData;
+	char *receiveBuff;
 };
