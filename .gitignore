@@ -1,0 +1,9 @@
+/*.sdf
+/*.sln
+/*.suo
+/Debug
+/MyUDP/*.vcxproj
+/MyUDP/*.filters
+/MyUDP/*.user
+/MyUDP/main.cpp
+/MyUDP/Debug

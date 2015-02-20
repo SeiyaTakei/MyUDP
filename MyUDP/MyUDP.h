@@ -1,43 +1,51 @@
+//**********************************
+// UDP Control Program
+// 
+// by Seiya Takei
+//**********************************
+
 #pragma once
+#define _WINSOCKAPI_
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <process.h>
 #include <winsock2.h>
-#pragma comment(lib, "ws2_32.lib")
+#include <time.h>
 
+#pragma comment(lib, "ws2_32.lib")
 
 class MyUDP {
 private:
-	//ソケット関連
-	
-	//送信用ソケット
+	//送受信ソケット
+	SOCKET sock;
+	//送信用
 	struct sockaddr_in sockAddr_send;
-	SOCKET sock_send;
 	unsigned short portnum_send;
 	int sendLength;
 	int wait_send;
-	//受信ソケット
+	//受信用
 	struct sockaddr_in sockAddr_receive;
-	SOCKET sock_receive;
 	unsigned short portnum_receive;
 	int receiveLength;
 	int wait_receive;
 
-	//スレッド処理関連
-	HANDLE sendThread;
-	HANDLE receiveThread;
+	//時間制御
+	clock_t send_count, send_count_start;
+	clock_t receive_count, receive_count_start;
 
 public:
 	MyUDP();
 	~MyUDP();
-	void init(unsigned short port_send, int send_length, char *sd, unsigned short port_receive, int receive_length, char *rb);
-	void run();
-	void stop();
-	static unsigned __stdcall SendThread(void *ptr);
-	static unsigned __stdcall ReceiveThread(void *ptr);
-	void updateSend();
-	void updateReceive();
+	void init(unsigned short port_send, unsigned short port_receive);
+	void update();
+	void close();
+
+	void setIPAddress(char *myIP, char *targetIP);
+	void setSendData(int send_length, char *sd);
+	void setReceiveData(int receive_length, char *rd);
 	void setSendFPS(int fps);
 	void setReceiveFPS(int fps);
-
+	void updateSend();
+	void updateReceive();
 	bool isInitialized;
 	char *sendData;
 	char *receiveBuff;

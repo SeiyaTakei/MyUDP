@@ -1,7 +1,7 @@
 #pragma once
 #include "MyUDP.h"
 #include <iostream>
-#include <time.h>
+
 using namespace std;
 
 MyUDP::MyUDP() : isInitialized(false), wait_send(0), wait_receive(0), sendData(NULL), receiveBuff(NULL) {
@@ -10,13 +10,12 @@ MyUDP::MyUDP() : isInitialized(false), wait_send(0), wait_receive(0), sendData(N
 MyUDP::~MyUDP() {
 }
 
-void MyUDP::init(unsigned short port_send, int send_length, char *sd, unsigned short port_receive, int receive_length, char *rb) {
+void MyUDP::init(unsigned short port_send, unsigned short port_receive) {
 	portnum_send = port_send;
 	portnum_receive = port_receive;
-	sendLength = send_length;
-	receiveLength = receive_length;
-	sendData = sd;
-	receiveBuff = rb;
+
+	send_count_start = clock();
+	receive_count_start = clock();
 
 	WSADATA wsadata;
 	if (0 != WSAStartup(MAKEWORD(2, 0), &wsadata)) {
@@ -24,115 +23,103 @@ void MyUDP::init(unsigned short port_send, int send_length, char *sd, unsigned s
 		return;
 	}
 
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock == INVALID_SOCKET) {
+		cout << stderr << " : Socket Error" << endl;
+		WSACleanup();
+		return;
+	}
+	cout << stderr << " : Socket Created" << endl;
+
+	//デフォルトではSend, Receiveともに"127.0.0.1"(ローカルループバック)に設定
+	memset(&sockAddr_receive, 0, sizeof(sockAddr_receive));
+	sockAddr_receive.sin_addr.s_addr = inet_addr("127.0.0.1");
+	sockAddr_receive.sin_port = htons(portnum_receive);
+	sockAddr_receive.sin_family = AF_INET;
+	u_long val = 1;
+	ioctlsocket(sock, FIONBIO, &val);
+	if (bind(sock, (struct sockaddr *)&sockAddr_receive, sizeof(sockAddr_receive)) == SOCKET_ERROR) {
+		closesocket(sock);
+		WSACleanup();
+		return;
+	}
+
 #pragma region SendSocketSetup
-	if (portnum_send != 0) {
-		sock_send = socket(AF_INET, SOCK_DGRAM, 0);
-		if (sock_send == INVALID_SOCKET) {
-			cout << stderr << "Send Socket Error" << endl;
-			WSACleanup();
-			return;
-		}
-		cout << stderr << "Send Socket Created" << endl;
-		memset(&sockAddr_send, 0, sizeof(sockAddr_send));
-		sockAddr_send.sin_addr.s_addr = inet_addr("127.0.0.1");
-		sockAddr_send.sin_port = htons(portnum_send);
-		sockAddr_send.sin_family = AF_INET;
-
-		/*if (bind(sock_send, (struct sockaddr *)&sockAddrIn, sizeof(sockAddrIn)) == SOCKET_ERROR) {
-			closesocket(sock_send);
-			WSACleanup();
-			return;
-		}*/
-	}
-#pragma endregion
-
-#pragma region ReceiveSocketSetup
-	if (portnum_receive != 0) {
-		sock_receive = socket(AF_INET, SOCK_DGRAM, 0);
-		if (sock_receive == INVALID_SOCKET) {
-			cout << stderr << "Receive Socket Error" << endl;
-			WSACleanup();
-			return;
-		}
-		cout << stderr << "Receive Socket Created" << endl;
-		memset(&sockAddr_receive, 0, sizeof(sockAddr_receive));
-		sockAddr_receive.sin_addr.s_addr = inet_addr("127.0.0.1");
-		sockAddr_receive.sin_port = htons(portnum_receive);
-		sockAddr_receive.sin_family = AF_INET;
-
-		if (bind(sock_receive, (struct sockaddr *)&sockAddr_receive, sizeof(sockAddr_receive)) == SOCKET_ERROR) {
-			closesocket(sock_receive);
-			WSACleanup();
-			return;
-		}
-	}
+	memset(&sockAddr_send, 0, sizeof(sockAddr_send));
+	sockAddr_send.sin_addr.s_addr = inet_addr("127.0.0.1");
+	sockAddr_send.sin_port = htons(portnum_send);
+	sockAddr_send.sin_family = AF_INET;
 #pragma endregion
 
 	isInitialized = true;
 }
 
-void MyUDP::run() {
-	if (isInitialized) {
-		if (portnum_send != 0) {
-			unsigned threadID1;
-			sendThread = (HANDLE)_beginthreadex(NULL, NULL, MyUDP::SendThread, this, 0, &threadID1);
-		}
-		if (portnum_receive != 0) {
-			unsigned threadID2;
-			receiveThread = (HANDLE)_beginthreadex(NULL, NULL, MyUDP::ReceiveThread, this, 0, &threadID2);
-		}
-	}
+void MyUDP::setSendData(int send_length, char *sd) {
+	sendLength = send_length;
+	sendData = sd;
 }
 
-void MyUDP::stop() {
+void MyUDP::setReceiveData(int receive_length, char *rd) {
+	receiveLength = receive_length;
+	receiveBuff = rd;
+}
+
+void MyUDP::setIPAddress(char* myIP, char* targetIP) {
+	sockAddr_send.sin_addr.s_addr = inet_addr(targetIP);
+	sockAddr_receive.sin_addr.s_addr = inet_addr(myIP);
+	//Socketの作り直し
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock == INVALID_SOCKET) {
+		cout << stderr << " : IPAddress configuration failed" << endl;
+		isInitialized = false;
+		WSACleanup();
+		return;
+	}
+	if (bind(sock, (struct sockaddr *)&sockAddr_receive, sizeof(sockAddr_receive)) == SOCKET_ERROR) {
+		closesocket(sock);
+		cout << stderr << " : IPAddress configuration failed" << endl;
+		WSACleanup();
+		isInitialized = false;
+		return;
+	}
+	cout << stderr << " : IPAddress configuration succeeded" << endl;
+}
+
+void MyUDP::update() {
+	updateSend();
+	updateReceive();
+}
+
+void MyUDP::close() {
 	if (isInitialized) {
-		if (portnum_send != 0) {
-			CloseHandle(sendThread);
-			closesocket(sock_send);
-		}
-		if (portnum_receive != 0) {
-			CloseHandle(receiveThread);
-			closesocket(sock_receive);
-		}
+		closesocket(sock);
 	}
 	WSACleanup();
 }
 
-unsigned __stdcall MyUDP::SendThread(void *ptr) {
-	reinterpret_cast<MyUDP*>(ptr)->updateSend();
-	return 0;
-}
-
-unsigned __stdcall MyUDP::ReceiveThread(void *ptr) {
-	reinterpret_cast<MyUDP*>(ptr)->updateReceive();
-	return 0;
-}
 
 void MyUDP::updateSend() {
-	int num;
-	clock_t countStart, countEnd;
-	int waiting;
-	//countBegin = clock();
-	countEnd = clock();
-	while (true) {
-		countStart = clock();
-		num = sendto(sock_send, sendData, sendLength, 0, (const struct sockaddr *)&sockAddr_send, sizeof(sockAddr_send));
-		
-		while (wait_send > (countEnd - countStart)) {
-			countEnd = clock();
+	if (isInitialized) {
+		if (portnum_send != 0) {
+			send_count = clock();
+			if (send_count - send_count_start > wait_send) {
+				sendto(sock, sendData, sendLength, 0, (const struct sockaddr *)&sockAddr_send, sizeof(sockAddr_send));
+				send_count_start = clock();
+			}
 		}
 	}
 }
 
 void MyUDP::updateReceive() {
 	int num;
-	//clock_t countStart, countEnd;
-	while (true) {
-		//countStart = clock();
-		num = recv(sock_receive, receiveBuff, receiveLength, 0);
-		/*while (wait_send > (countEnd - countStart)) {
-			countEnd = clock();
-		}*/
+	if (isInitialized) {
+		if (portnum_receive != 0) {
+			receive_count = clock();
+			if (receive_count - receive_count_start > wait_receive) {
+				num = recv(sock, receiveBuff, receiveLength, 0);
+				receive_count_start = clock();
+			}
+		}
 	}
 }
 
@@ -141,7 +128,7 @@ void MyUDP::setSendFPS(int fps) {
 		wait_send = 0;
 		return;
 	}
-	wait_send =  (int)(1000 * 1.0/(double)fps);
+	wait_send = (int)(1000 * 1.0 / (double)fps);
 }
 
 void MyUDP::setReceiveFPS(int fps) {
