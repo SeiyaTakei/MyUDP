@@ -4,7 +4,7 @@
 
 using namespace std;
 
-MyUDP::MyUDP() : isInitialized(false), wait_send(0), wait_receive(0), sendData(NULL), receiveBuff(NULL) {
+MyUDP::MyUDP() : isInitialized(false), wait_send(0), wait_receive(0), sendData(NULL), receiveData(NULL) {
 }
 
 MyUDP::~MyUDP() {
@@ -61,7 +61,7 @@ void MyUDP::setSendData(int send_length, char *sd) {
 
 void MyUDP::setReceiveData(int receive_length, char *rd) {
 	receiveLength = receive_length;
-	receiveBuff = rd;
+	receiveData = rd;
 }
 
 void MyUDP::setIPAddress(char* myIP, char* targetIP) {
@@ -116,7 +116,7 @@ void MyUDP::updateReceive() {
 		if (portnum_receive != 0) {
 			receive_count = clock();
 			if (receive_count - receive_count_start > wait_receive) {
-				num = recv(sock, receiveBuff, receiveLength, 0);
+				num = recv(sock, receiveData, receiveLength, 0);
 				receive_count_start = clock();
 			}
 		}

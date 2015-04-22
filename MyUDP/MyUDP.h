@@ -32,6 +32,9 @@ private:
 	clock_t send_count, send_count_start;
 	clock_t receive_count, receive_count_start;
 
+	char *sendData;
+	char *receiveData;
+
 public:
 	MyUDP();
 	~MyUDP();
@@ -47,6 +50,5 @@ public:
 	void updateSend();
 	void updateReceive();
 	bool isInitialized;
-	char *sendData;
-	char *receiveBuff;
+	
 };
